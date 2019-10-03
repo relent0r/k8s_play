@@ -93,6 +93,43 @@ class k8sclient():
         except Exception as e:
             logger.warn("Error code : {0} - Reason : {1}" .format(e.status, e.reason))
     
+    def create_deployment(self, name_space, deployment):
+        v1 = client.CoreV1Api(self.api_client)
+        v1apps = client.AppsV1Api(self.api_client)
+        # Initialize data objects
+        body = client.V1Deployment()
+        metadata = client.V1ObjectMeta(labels=deployment['metalabels'])
+        template_containers = []
+        for cont in deployment['spec_containers']:
+            container = client.V1Container(name=cont['name'], image=cont['image'])
+            template_containers.append(container)
+        
+        spec_selector = client.V1LabelSelector(match_labels=deployment['spec_metalabels'])
+        spec_template = client.V1PodTemplateSpec(metadata=metadata, spec=client.V1PodSpec(containers=template_containers))
+        spec = client.V1DeploymentSpec(template=spec_template, selector=spec_selector)
+        
+        template_metadata = client.V1ObjectMeta(labels=deployment['spec_metalabels'])
+
+        body.api_version = deployment['api_version']
+        body.kind = deployment['kind']
+
+        metadata.name = deployment['metaname']
+        metadata.namespace = name_space
+
+        body.metadata = metadata
+        body.spec = spec
+        try:
+            response = v1apps.create_namespaced_deployment(namespace=name_space, body=body)
+            logger.info("Success : " .format(response.status))
+            logger.debug(response)
+        except Exception as e:
+            logger.warn("Error Reason : {0}" .format(e))
+        
+        return response
+
+
+        
+
 
 
 
